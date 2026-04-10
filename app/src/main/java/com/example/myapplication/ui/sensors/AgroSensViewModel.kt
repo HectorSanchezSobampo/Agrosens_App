@@ -9,10 +9,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.example.myapplication.bluetooth.SensorFieldUpdate
-import com.example.myapplication.bluetooth.applyUpdate
-import com.example.myapplication.bluetooth.parseSensorLine
-import com.example.myapplication.model.SensorData
+import com.example.myapplication.data.bluetooth.SensorFieldUpdate
+import com.example.myapplication.data.bluetooth.applyUpdate
+import com.example.myapplication.data.bluetooth.parseSensorLine
+import com.example.myapplication.domain.model.SensorData
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.UUID

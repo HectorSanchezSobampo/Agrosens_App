@@ -1,4 +1,4 @@
-package com.example.myapplication.data.db
+package com.example.myapplication.data.`localdb`
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase

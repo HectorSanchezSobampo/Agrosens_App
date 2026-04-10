@@ -2,7 +2,7 @@ package com.example.myapplication.viewmodel
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
-import com.example.myapplication.model.User
+import com.example.myapplication.domain.model.User
 
 class AuthViewModel : ViewModel() {
 

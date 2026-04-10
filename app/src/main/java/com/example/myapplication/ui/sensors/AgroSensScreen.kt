@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.myapplication.model.SensorData
+import com.example.myapplication.domain.model.SensorData
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -18,10 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.data.local.db.DBService
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import com.example.myapplication.data.db.DBService
-import com.example.myapplication.ui.AppNavigator
+import com.example.myapplication.ui.navigator.AppNavigator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

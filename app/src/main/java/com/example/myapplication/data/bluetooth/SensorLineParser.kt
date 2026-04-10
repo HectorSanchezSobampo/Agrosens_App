@@ -1,6 +1,6 @@
-package com.example.myapplication.bluetooth
+package com.example.myapplication.data.bluetooth
 
-import com.example.myapplication.model.SensorData
+import com.example.myapplication.domain.model.SensorData
 
 sealed class SensorFieldUpdate {
     data class Humidity(val value: Float) : SensorFieldUpdate()

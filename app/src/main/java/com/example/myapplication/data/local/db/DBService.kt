@@ -1,8 +1,9 @@
-package com.example.myapplication.data.db
+package com.example.myapplication.data.local.db
 
 import android.content.ContentValues
 import android.content.Context
-import com.example.myapplication.model.User
+import com.example.myapplication.data.localdb.DBHelper
+import com.example.myapplication.domain.model.User
 
 object DBService {
 
