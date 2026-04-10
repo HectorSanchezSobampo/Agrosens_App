@@ -19,18 +19,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.example.myapplication.ui.sensors.AgroSensScreen
+import com.example.myapplication.data.db.DBService
+import com.example.myapplication.ui.AppNavigator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DBService.init(this)
         setContent {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF1A1A2E)
+                    color = Color(0xFFF9FBFC)
                 ) {
-                    AgroSensScreen(modifier = Modifier.fillMaxSize())
+                    AppNavigator()
                 }
             }
         }
