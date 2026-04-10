@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Fondo de splash screen -->
+        <item name="android:windowSplashScreenBackground">@color/white</item>
+
+        <!-- Logo App splash screen-->
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_luncher_logoapp</item>
+    </style>
+
 </resources>
