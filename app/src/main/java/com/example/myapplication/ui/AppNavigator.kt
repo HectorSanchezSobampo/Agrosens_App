@@ -1,6 +1,8 @@
 package com.example.myapplication.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.*
 import androidx.navigation.compose.rememberNavController
@@ -14,21 +16,17 @@ fun AppNavigator() {
     val authViewModel: AuthViewModel = viewModel()
     val user by authViewModel.user
 
-    // Listen for user state changes to navigate
     LaunchedEffect(user) {
         if (user != null) {
             navController.navigate("home") {
-                // Clear backstack so user can't go back to login
                 popUpTo("auth") { inclusive = true }
-            }
-        } else {
-            navController.navigate("auth") {
-                popUpTo(0)
+                launchSingleTop = true
             }
         }
     }
 
     NavHost(
+        modifier = Modifier.fillMaxSize(),
         navController = navController,
         startDestination = "auth"
     ) {

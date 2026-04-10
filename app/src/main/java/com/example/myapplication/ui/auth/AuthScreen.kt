@@ -25,7 +25,7 @@ fun AuthScreen(authViewModel: AuthViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF9FBFC))
+            .background(Color(0xFFF8F9FA))
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
