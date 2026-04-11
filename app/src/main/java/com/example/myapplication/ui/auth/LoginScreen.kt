@@ -110,7 +110,7 @@ fun LoginScreen(authViewModel: AuthViewModel, onNavigateToRegister: () -> Unit) 
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(
-                onClick = { },
+                onClick = { authViewModel.signIn(email) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
