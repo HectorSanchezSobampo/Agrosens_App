@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.sensors
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -52,9 +53,37 @@ class AgroSensViewModel(application: Application) : AndroidViewModel(application
     var sensorData: SensorData by mutableStateOf(SensorData())
         private set
 
+    var history: List<SensorData> by mutableStateOf(emptyList())
+        private set
+
+    init {
+        // Datos de ejemplo para visualizar el historial
+        history = listOf(
+            SensorData(
+                humidityPercent = 45.5f,
+                temperatureC = 24.2f,
+                ecUSPerCm = 450,
+                nitrogenMgPerKg = 30,
+                phosphorusMgPerKg = 25,
+                potassiumMgPerKg = 40,
+                lastUpdateEpochMs = System.currentTimeMillis()
+            ),
+            SensorData(
+                humidityPercent = 38.0f,
+                temperatureC = 26.5f,
+                ecUSPerCm = 500,
+                nitrogenMgPerKg = 28,
+                phosphorusMgPerKg = 22,
+                potassiumMgPerKg = 38,
+                lastUpdateEpochMs = System.currentTimeMillis() - 3600000
+            )
+        )
+    }
+
     private var socket: BluetoothSocket? = null
     private var readJob: Job? = null
 
+    @SuppressLint("MissingPermission")
     fun refreshBondedDevices() {
         bondedDevices = bluetoothAdapter?.bondedDevices?.toList().orEmpty()
         if (selectedDeviceAddress == null) {
@@ -80,6 +109,7 @@ class AgroSensViewModel(application: Application) : AndroidViewModel(application
         connectToAddress(address)
     }
 
+    @SuppressLint("MissingPermission")
     private fun connectToAddress(address: String) {
         val adapter = bluetoothAdapter ?: run {
             errorMessage = "Bluetooth no disponible en este dispositivo."
@@ -176,6 +206,12 @@ class AgroSensViewModel(application: Application) : AndroidViewModel(application
 
     fun updateScanning(scanning: Boolean) {
         isScanning = scanning
+    }
+
+    fun saveCurrentData() {
+        if (sensorData.lastUpdateEpochMs != null) {
+            history = listOf(sensorData) + history
+        }
     }
 }
 

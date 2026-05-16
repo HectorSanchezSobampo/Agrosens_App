@@ -60,6 +60,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.ui.tooling.preview.Preview
+
 private val ScreenBg = Color(0xFFF8F9FA)
 private val BrandGreen = Color(0xFF2E7D32)
 private val StatusBadgeBg = Color(0xFFE3F2FD)
@@ -72,6 +74,7 @@ fun AgroSensScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    var currentTab by remember { mutableStateOf(0) } // 0: Dashboard, 1: Historial, 2: Ajustes
 
     val hasBluetoothConnectPermission by remember {
         derivedStateOf {
@@ -161,7 +164,15 @@ fun AgroSensScreen(
             return
         }
         if (!hasBluetoothConnectPermission) {
-            permissionLauncherConnect.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            permissionLauncherConnect.launch(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    Manifest.permission.BLUETOOTH_CONNECT
+                } else {
+                    // En versiones anteriores no se requiere este permiso, 
+                    // pero teóricamente hasBluetoothConnectPermission sería true.
+                    ""
+                }
+            )
             return
         }
 
@@ -182,79 +193,200 @@ fun AgroSensScreen(
             .background(ScreenBg)
             .statusBarsPadding()
     ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(top = 10.dp, bottom = 16.dp)
-        ) {
-            DashboardHeader(
-                isConnected = viewModel.isConnected,
-                isConnecting = viewModel.isConnecting,
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            if (!hasBluetoothConnectPermission) {
-                BluetoothPermissionCard(
-                    onRequestPermission = {
-                        if (activity != null) {
-                            permissionLauncherConnect.launch(Manifest.permission.BLUETOOTH_CONNECT)
-                        }
-                    },
-                )
-            } else {
-                BluetoothPanel(
+        Box(modifier = Modifier.weight(1f)) {
+            when (currentTab) {
+                0 -> DashboardTab(
                     viewModel = viewModel,
-                    onScan = { startScan() },
+                    hasBluetoothConnectPermission = hasBluetoothConnectPermission,
+                    activity = activity,
+                    permissionLauncherConnect = permissionLauncherConnect,
+                    onScan = { startScan() }
                 )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                val data = viewModel.sensorData
-                SensorDataGrid(data = data)
-
-                data.lastUpdateEpochMs?.let { epoch ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Última actualización: ${formatEpoch(epoch)}",
-                        color = Color(0xFF888888),
-                        fontSize = 12.sp,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        Toast.makeText(
-                            context,
-                            "Datos guardados (historial próximamente)",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
-                ) {
-                    Text(
-                        text = "Guardar",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                    )
+                1 -> HistoryTab(history = viewModel.history)
+                else -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Ajustes próximamente")
+                    }
                 }
             }
         }
 
         BottomNavBar(
+            currentTab = currentTab,
+            onTabSelected = { currentTab = it },
             modifier = Modifier.navigationBarsPadding(),
         )
+    }
+}
+
+@Composable
+private fun DashboardTab(
+    viewModel: AgroSensViewModel,
+    hasBluetoothConnectPermission: Boolean,
+    activity: Activity?,
+    permissionLauncherConnect: androidx.activity.result.ActivityResultLauncher<String>,
+    onScan: () -> Unit
+) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 10.dp, bottom = 16.dp)
+    ) {
+        DashboardHeader(
+            isConnected = viewModel.isConnected,
+            isConnecting = viewModel.isConnecting,
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        if (!hasBluetoothConnectPermission) {
+            BluetoothPermissionCard(
+                onRequestPermission = {
+                    if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        permissionLauncherConnect.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                    }
+                },
+            )
+        }
+ else {
+            BluetoothPanel(
+                viewModel = viewModel,
+                onScan = onScan,
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            val data = viewModel.sensorData
+            SensorDataGrid(data = data)
+
+            data.lastUpdateEpochMs?.let { epoch ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Última actualización: ${formatEpoch(epoch)}",
+                    color = Color(0xFF888888),
+                    fontSize = 12.sp,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    viewModel.saveCurrentData()
+                    Toast.makeText(
+                        context,
+                        "Datos guardados en el historial",
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+            ) {
+                Text(
+                    text = "Guardar",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryTab(history: List<SensorData>) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp)
+            .padding(top = 10.dp)
+    ) {
+        Text(
+            text = "Historial de Datos",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = BrandGreen,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        if (history.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No hay datos guardados aún.",
+                    color = Color.Gray,
+                    fontSize = 16.sp
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                history.forEach { data ->
+                    HistoryItemCard(data)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryItemCard(data: SensorData) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = data.lastUpdateEpochMs?.let { formatFullDate(it) } ?: "Sin fecha",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = BrandGreen
+                )
+                Text(
+                    text = data.lastUpdateEpochMs?.let { formatEpoch(it) } ?: "--:--",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+            
+            Row(modifier = Modifier.fillMaxWidth()) {
+                HistoryMetric(label = "Hum.", value = "${data.humidityPercent?.let { formatOneDecimal(it) } ?: "--"}%", modifier = Modifier.weight(1f))
+                HistoryMetric(label = "Temp.", value = "${data.temperatureC?.let { formatOneDecimal(it) } ?: "--"}°C", modifier = Modifier.weight(1f))
+                HistoryMetric(label = "EC", value = "${data.ecUSPerCm ?: "--"}", modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                HistoryMetric(label = "N", value = "${data.nitrogenMgPerKg ?: "--"}", modifier = Modifier.weight(1f))
+                HistoryMetric(label = "P", value = "${data.phosphorusMgPerKg ?: "--"}", modifier = Modifier.weight(1f))
+                HistoryMetric(label = "K", value = "${data.potassiumMgPerKg ?: "--"}", modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(text = label, fontSize = 11.sp, color = Color.Gray)
+        Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
     }
 }
 
@@ -700,7 +832,11 @@ private fun DeviceRowLight(
 }
 
 @Composable
-private fun BottomNavBar(modifier: Modifier = Modifier) {
+private fun BottomNavBar(
+    currentTab: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier.fillMaxWidth()) {
         HorizontalDivider(
             thickness = 1.dp,
@@ -715,23 +851,43 @@ private fun BottomNavBar(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "Dashboard",
-                fontSize = 12.sp,
-                color = BrandGreen,
-                fontWeight = FontWeight.Bold,
+            BottomNavItem(
+                label = "Dashboard",
+                isSelected = currentTab == 0,
+                onClick = { onTabSelected(0) }
             )
-            Text(
-                text = "Historial",
-                fontSize = 12.sp,
-                color = Color(0xFFAAAAAA),
+            BottomNavItem(
+                label = "Historial",
+                isSelected = currentTab == 1,
+                onClick = { onTabSelected(1) }
             )
-            Text(
-                text = "Ajustes",
-                fontSize = 12.sp,
-                color = Color(0xFFAAAAAA),
+            BottomNavItem(
+                label = "Ajustes",
+                isSelected = currentTab == 2,
+                onClick = { onTabSelected(2) }
             )
         }
+    }
+}
+
+@Composable
+private fun BottomNavItem(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = if (isSelected) BrandGreen else Color(0xFFAAAAAA),
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+        )
     }
 }
 
@@ -771,4 +927,37 @@ private fun statusNpk(value: Int?, low: Int, high: Int): String = when {
 private fun formatEpoch(epochMs: Long): String {
     val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     return sdf.format(Date(epochMs))
+}
+
+private fun formatFullDate(epochMs: Long): String {
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    return sdf.format(Date(epochMs))
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HistoryTabPreview() {
+    val mockHistory = listOf(
+        SensorData(
+            humidityPercent = 45.5f,
+            temperatureC = 24.2f,
+            ecUSPerCm = 450,
+            nitrogenMgPerKg = 30,
+            phosphorusMgPerKg = 25,
+            potassiumMgPerKg = 40,
+            lastUpdateEpochMs = System.currentTimeMillis()
+        ),
+        SensorData(
+            humidityPercent = 38.0f,
+            temperatureC = 26.5f,
+            ecUSPerCm = 500,
+            nitrogenMgPerKg = 28,
+            phosphorusMgPerKg = 22,
+            potassiumMgPerKg = 38,
+            lastUpdateEpochMs = System.currentTimeMillis() - 3600000 // Hace una hora
+        )
+    )
+    Box(modifier = Modifier.background(ScreenBg)) {
+        HistoryTab(history = mockHistory)
+    }
 }

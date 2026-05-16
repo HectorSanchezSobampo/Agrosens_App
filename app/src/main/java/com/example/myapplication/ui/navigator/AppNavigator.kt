@@ -38,7 +38,7 @@ fun AppNavigator() {
     NavHost(
         modifier = Modifier.fillMaxSize(),
         navController = navController,
-        startDestination = "auth",
+        startDestination = "home",
 
         enterTransition = {
             slideInHorizontally(
