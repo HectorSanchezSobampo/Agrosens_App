@@ -44,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -75,6 +76,7 @@ fun AgroSensScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     var currentTab by remember { mutableStateOf(0) } // 0: Dashboard, 1: Historial, 2: Ajustes
+    val history = remember { mutableStateListOf<SensorData>().apply { addAll(viewModel.history) } }
 
     val hasBluetoothConnectPermission by remember {
         derivedStateOf {
@@ -168,7 +170,7 @@ fun AgroSensScreen(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     Manifest.permission.BLUETOOTH_CONNECT
                 } else {
-                    // En versiones anteriores no se requiere este permiso, 
+                    // En versiones anteriores no se requiere este permiso,
                     // pero teóricamente hasBluetoothConnectPermission sería true.
                     ""
                 }
@@ -200,14 +202,11 @@ fun AgroSensScreen(
                     hasBluetoothConnectPermission = hasBluetoothConnectPermission,
                     activity = activity,
                     permissionLauncherConnect = permissionLauncherConnect,
-                    onScan = { startScan() }
+                    onScan = { startScan() },
+                    onSaveCurrentData = { savedReading -> history.add(savedReading) }
                 )
-                1 -> HistoryTab(history = viewModel.history)
-                else -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Ajustes próximamente")
-                    }
-                }
+                1 -> HistoryTab(history = history)
+                2 -> SettingsTab()
             }
         }
 
@@ -225,7 +224,8 @@ private fun DashboardTab(
     hasBluetoothConnectPermission: Boolean,
     activity: Activity?,
     permissionLauncherConnect: androidx.activity.result.ActivityResultLauncher<String>,
-    onScan: () -> Unit
+    onScan: () -> Unit,
+    onSaveCurrentData: (SensorData) -> Unit,
 ) {
     val context = LocalContext.current
     Column(
@@ -250,8 +250,7 @@ private fun DashboardTab(
                     }
                 },
             )
-        }
- else {
+        } else {
             BluetoothPanel(
                 viewModel = viewModel,
                 onScan = onScan,
@@ -275,7 +274,9 @@ private fun DashboardTab(
 
             Button(
                 onClick = {
+                    val snapshot = data.copy()
                     viewModel.saveCurrentData()
+                    onSaveCurrentData(snapshot)
                     Toast.makeText(
                         context,
                         "Datos guardados en el historial",
@@ -339,6 +340,92 @@ private fun HistoryTab(history: List<SensorData>) {
     }
 }
 
+
+@Composable
+private fun SettingsTab() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 10.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = "Ajustes",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = BrandGreen,
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Bluetooth",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Permisos, conexión y dispositivos guardados del sensor.",
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666),
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Historial",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Listado de lecturas guardadas desde el panel principal.",
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666),
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Aplicación",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Versión, estado general y opciones básicas de la pantalla.",
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun HistoryItemCard(data: SensorData) {
     Card(
@@ -366,7 +453,7 @@ private fun HistoryItemCard(data: SensorData) {
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
-            
+
             Row(modifier = Modifier.fillMaxWidth()) {
                 HistoryMetric(label = "Hum.", value = "${data.humidityPercent?.let { formatOneDecimal(it) } ?: "--"}%", modifier = Modifier.weight(1f))
                 HistoryMetric(label = "Temp.", value = "${data.temperatureC?.let { formatOneDecimal(it) } ?: "--"}°C", modifier = Modifier.weight(1f))
@@ -529,8 +616,8 @@ private fun BluetoothPanel(
                 Button(
                     onClick = { viewModel.connect() },
                     enabled = viewModel.selectedDeviceAddress != null &&
-                        !viewModel.isConnected &&
-                        !viewModel.isConnecting,
+                            !viewModel.isConnected &&
+                            !viewModel.isConnecting,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
@@ -570,7 +657,7 @@ private fun BluetoothPanel(
                 )
                 Text(
                     text = if (expandList) "Ocultar ▲" else "Mostrar ▼",
-                    color = BrandGreen, 
+                    color = BrandGreen,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                 )
